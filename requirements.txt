@@ -1,0 +1,12 @@
+pandas
+numpy
+matplotlib
+ipykernel
+scikit-learn
+seaborn
+flask
+flask_cors
+flasgger
+gunicorn
+pytest
+pylint

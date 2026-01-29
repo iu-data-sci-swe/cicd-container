@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+	<title>Development Webshop</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+		body {
+			font-family: sans-serif;
+			background: #c0c0c0;
+			min-height: 100vh;
+			padding: 20px;
+		}
+		#app {
+			max-width: 1200px;
+			margin: 0 auto;
+			background: white;
+			border-radius: 12px;
+			box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+			overflow: hidden;
+		}
+		.header {
+			background: #00e8ed;
+			color: white;
+			text-align: center;
+		}
+		.header h1 {
+			font-size: 2.5em;
+			margin-bottom: 10px;
+		}
+		.login-form {
+			max-width: 500px;
+			margin: 0 auto;
+		}
+		.form-group {
+			margin-bottom: 10px;
+		}
+		.form-group label {
+			display: block;
+			margin-bottom: 8px;
+			font-weight: 600;
+			color: #333;
+			font-size: 1.1em;
+		}
+		.form-group select {
+			width: 100%;
+			padding: 12px;
+			border: 2px solid #ddd;
+			border-radius: 6px;
+			font-size: 16px;
+			transition: border-color 0.3s;
+		}
+		.form-group select:focus,
+		.form-group input[type="datetime-local"]:focus {
+			outline: none;
+			border-color: #00e8ed;
+		}
+		.form-group input[type="datetime-local"] {
+			width: 100%;
+			padding: 12px;
+			border: 2px solid #ddd;
+			border-radius: 6px;
+			font-size: 16px;
+			transition: border-color 0.3s;
+		}
+		.btn {
+			padding: 14px 32px;
+			font-size: 18px;
+			border: none;
+			border-radius: 6px;
+			cursor: pointer;
+			transition: all 0.3s;
+			font-weight: 600;
+		}
+		.btn-primary {
+			background: #00e8ed;
+			color: white;
+			width: 100%;
+		}
+		.btn-primary:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 10px 20px rgba(0,0,0,.3);
+		}
+		.btn-primary:disabled {
+			background: #ccc;
+			cursor: not-allowed;
+			transform: none;
+		}
+		.products-table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-bottom: 10px;
+		}
+		.products-table th,
+		.products-table td {
+			padding: 5px;
+			text-align: left;
+			border-bottom: 1px solid #eee;
+		}
+		.products-table th {
+			background: #f8f9fa;
+			font-weight: 600;
+			color: #333;
+		}
+		.products-table tr:hover {
+			background: #f8f9fa;
+		}
+		.quantity-control {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+		.quantity-btn {
+			padding: 8px 14px;
+			border: 2px solid #00e8ed;
+			background: white;
+			color: #00e8ed;
+			border-radius: 4px;
+			cursor: pointer;
+			font-weight: 600;
+			transition: all 0.2s;
+		}
+		.quantity-btn:hover {
+			background: #00e8ed;
+			color: white;
+		}
+		.quantity-btn:disabled {
+			border-color: #ccc;
+			color: #ccc;
+			cursor: not-allowed;
+		}
+		.quantity-btn:disabled:hover {
+			background: white;
+			color: #ccc;
+		}
+		.quantity-input {
+			width: 70px;
+			padding: 8px;
+			border: 2px solid #ddd;
+			border-radius: 4px;
+			text-align: center;
+			font-size: 16px;
+		}
+		.total-section {
+			background: #f8f9fa;
+			border-radius: 8px;
+		}
+		.total-amount {
+			font-size: 2em;
+			font-weight: 700;
+			color: #00e8ed;
+			text-align: right;
+		}
+		.payment-section {
+			background: #f8f9fa;
+			border-radius: 8px;
+		}
+		.payment-section h3 {
+			margin-bottom: 10px;
+			color: #333;
+		}
+		.payment-option {
+			background: white;
+			border-radius: 6px;
+			border: 2px solid #ddd;
+			transition: all 0.3s;
+		}
+		.payment-option:hover {
+			border-color: #00e8ed;
+		}
+		.payment-option.disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+		.payment-option label {
+			display: flex;
+			align-items: center;
+			cursor: pointer;
+			font-size: 1.1em;
+		}
+		.payment-option input[type="radio"] {
+			margin-right: 12px;
+			width: 20px;
+			height: 20px;
+			cursor: pointer;
+		}
+		.payment-option input[type="radio"]:disabled {
+			cursor: not-allowed;
+		}
+		.fraud-indicator {
+			margin-left: auto;
+			padding: 5px 12px;
+			border-radius: 4px;
+			font-size: 0.85em;
+			font-weight: 600;
+		}
+		.fraud-low {
+			background: #d4edda;
+			color: #155724;
+		}
+		.fraud-medium {
+			background: #fff3cd;
+			color: #856404;
+		}
+		.fraud-high {
+			background: #f8d7da;
+			color: #721c24;
+		}
+		.buy-button {
+			font-size: 1.5em;
+			padding: 10px;
+		}
+		.loading {
+			text-align: center;
+			color: #00e8ed;
+			font-weight: 600;
+		}
+		.error {
+			background: #ddd;
+			color: #e63d4b;
+			border-radius: 6px;
+		}
+		.user-info {
+			background: #ddd;
+			border-radius: 6px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+		.logout-btn {
+			padding: 8px 16px;
+			background: #ffa73a;
+			color: white;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-weight: 600;
+		}
+		.logout-btn:hover {
+			background: #ff8d00;
+		}
+
+		/* Utility classes for visual spacing and alignment */
+		.margin-bottom10 { margin-bottom: 10px; }
+		.margin-bottom30 { margin-bottom: 30px; }
+		.padding5 { padding: 5px; }
+		.padding10 { padding: 10px; }
+		.text-center { text-align: center; }
+		.text-right { text-align: right; }
+	</style>
+</head>
+<body>
+	<div id="app">
+		<div class="header padding10">
+			<h1>Development Webshop</h1>
+		</div>
+
+		<!-- Login View -->
+		<div v-if="!loggedIn" class="padding10">
+			<div class="login-form">
+				<h2 class="margin-bottom30 text-center">Welcome! Please Log In</h2>
+
+				<div class="form-group">
+					<label for="gender">Gender</label>
+					<select id="gender" v-model="loginData.gender">
+						<option value="">-- Select Gender --</option>
+						<option value="m">Male</option>
+						<option value="f">Female</option>
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label for="state">Location (State)</label>
+					<select id="state" v-model="loginData.state">
+						<option value="">-- Select State --</option>
+						<option v-for="state in states" :key="state" :value="state">{{ state }}</option>
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label for="creditScore">Credit Score</label>
+					<select id="creditScore" v-model.number="loginData.creditScore">
+						<option v-for="score in 11" :key="score - 1" :value="score - 1">{{ score - 1 }}</option>
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label for="dateTime">Date & Time</label>
+          <input id="dateTime" type="datetime-local" v-model="loginData.dateTime">
+				</div>
+
+				<button
+					class="btn btn-primary"
+					@click="login"
+					:disabled="!canLogin">
+					Enter Shop
+				</button>
+			</div>
+		</div>
+
+		<!-- Shop View -->
+		<div v-if="loggedIn" class="padding10">
+			<div class="user-info">
+				<div>
+					<strong>Gender:</strong> {{ loginData.gender === 'm' ? 'Male' : 'Female' }} |
+					<strong>Location:</strong> {{ loginData.state }} |
+					<strong>Credit Score:</strong> {{ loginData.creditScore }} |
+					<strong>Date/Time:</strong> {{ loginData.dateTime }}
+				</div>
+				<button class="logout-btn" @click="logout">Logout</button>
+			</div>
+
+			<div v-if="error" class="error padding5 margin-bottom10">{{ error }}</div>
+
+			<h2>Available Products</h2>
+
+			<table class="products-table">
+				<thead>
+					<tr>
+						<th>Product</th>
+						<th>Price</th>
+						<th>Quantity</th>
+						<th>Subtotal</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr v-for="product in products" :key="product.category">
+						<td><strong>{{ product.category }}</strong></td>
+						<td>${{ product.price.toFixed(2) }}</td>
+						<td>
+							<div class="quantity-control">
+								<button
+									class="quantity-btn"
+									@click="decreaseQuantity(product)"
+									:disabled="product.quantity === 0">
+									−
+								</button>
+								<input
+									type="number"
+									class="quantity-input"
+									v-model.number="product.quantity"
+									@change="updateQuantity(product)"
+									min="0"
+									max="99">
+								<button
+									class="quantity-btn"
+									@click="increaseQuantity(product)">
+									+
+								</button>
+							</div>
+						</td>
+						<td><strong>${{ (product.price * product.quantity).toFixed(2) }}</strong></td>
+					</tr>
+				</tbody>
+			</table>
+
+			<div class="total-section padding5 margin-bottom10">
+				<h3 class="text-right">Total Amount:</h3>
+				<div class="total-amount">${{ totalAmount.toFixed(2) }}</div>
+			</div>
+
+			<div v-if="loading" class="loading padding10">
+				⏳ Checking fraud risk...
+			</div>
+
+			<div v-if="totalAmount > 0 && !loading" class="payment-section padding5 margin-bottom10">
+				<h3>Payment Options</h3>
+
+				<div
+					class="payment-option padding5 margin-bottom10"
+					:class="{ disabled: !paymentOptions.advancePayment.enabled }">
+					<label>
+						<input
+							type="radio"
+							name="payment"
+							value="advance"
+							v-model="selectedPayment"
+							:disabled="!paymentOptions.advancePayment.enabled">
+						<span>Advance Payment</span>
+						<span
+							v-if="paymentOptions.fraudRisk !== null"
+							class="fraud-indicator"
+							:class="{
+								'fraud-low': paymentOptions.fraudRisk < 0.05,
+								'fraud-medium': paymentOptions.fraudRisk >= 0.05 && paymentOptions.fraudRisk < 0.40,
+								'fraud-high': paymentOptions.fraudRisk >= 0.4
+							}">
+							Risk: {{ (paymentOptions.fraudRisk * 100).toFixed(2) }}%
+						</span>
+					</label>
+				</div>
+
+				<div
+					class="payment-option padding5 margin-bottom10"
+					:class="{ disabled: !paymentOptions.creditCard.enabled }">
+					<label>
+						<input
+							type="radio"
+							name="payment"
+							value="credit"
+							v-model="selectedPayment"
+							:disabled="!paymentOptions.creditCard.enabled">
+						<span>Credit Card</span>
+						<span
+							v-if="paymentOptions.fraudRisk !== null"
+							class="fraud-indicator"
+							:class="{
+								'fraud-low': paymentOptions.fraudRisk < 0.05,
+								'fraud-medium': paymentOptions.fraudRisk >= 0.05 && paymentOptions.fraudRisk < 0.40,
+								'fraud-high': paymentOptions.fraudRisk >= 0.4
+							}">
+							Risk: {{ (paymentOptions.fraudRisk * 100).toFixed(2) }}%
+						</span>
+					</label>
+				</div>
+
+				<div
+					class="payment-option padding5 margin-bottom10"
+					:class="{ disabled: !paymentOptions.invoice.enabled }">
+					<label>
+						<input
+							type="radio"
+							name="payment"
+							value="invoice"
+							v-model="selectedPayment"
+							:disabled="!paymentOptions.invoice.enabled">
+						<span>Invoice</span>
+						<span
+							v-if="paymentOptions.fraudRisk !== null"
+							class="fraud-indicator"
+							:class="{
+								'fraud-low': paymentOptions.fraudRisk < 0.05,
+								'fraud-medium': paymentOptions.fraudRisk >= 0.05 && paymentOptions.fraudRisk < 0.40,
+								'fraud-high': paymentOptions.fraudRisk >= 0.4
+							}">
+							Risk: {{ (paymentOptions.fraudRisk * 100).toFixed(2) }}%
+						</span>
+					</label>
+				</div>
+			</div>
+
+			<button
+				class="btn btn-primary buy-button"
+				@click="buyNow"
+				:disabled="!canBuy">
+				{{ buyButtonText }}
+			</button>
+		</div>
+	</div>
+
+	<script>
+		const { createApp } = Vue;
+
+		createApp({
+			data() {
+				return {
+					loggedIn: false,
+					loginData: {
+						gender: '',
+						state: '',
+						creditScore: 9,
+						dateTime: this.getCurrentDateTime()
+					},
+					states: Array.from({ length: 40 }, (_, i) => `state_${String(i + 1).padStart(2, '0')}`),
+					products: [],
+					selectedPayment: '',
+					paymentOptions: {
+            fraudRisk: null,
+						advancePayment: { enabled: true },
+						creditCard: { enabled: true },
+						invoice: { enabled: true }
+					},
+					loading: false,
+					error: null,
+					fraudCheckTimeout: null
+				}
+			},
+			computed: {
+				totalAmount() {
+					return this.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+				},
+				canLogin() {
+					return this.loginData.gender && this.loginData.state && this.loginData.creditScore !== null && this.loginData.dateTime;
+				},
+				canBuy() {
+					return this.totalAmount > 0 && this.selectedPayment && !this.loading;
+				},
+				buyButtonText() {
+					if (this.totalAmount === 0) return 'Add items to cart';
+					if (!this.selectedPayment) return 'Select payment method';
+					if (this.loading) return 'Checking fraud risk...';
+					return `Buy Now - $${this.totalAmount.toFixed(2)}`;
+				}
+			},
+			methods: {
+				getCurrentDateTime() {
+					const now = new Date();
+					const year = now.getFullYear();
+					const month = String(now.getMonth() + 1).padStart(2, '0');
+					const day = String(now.getDate()).padStart(2, '0');
+					const hours = String(now.getHours()).padStart(2, '0');
+					const minutes = String(now.getMinutes()).padStart(2, '0');
+					return `${year}-${month}-${day}T${hours}:${minutes}`;
+				},
+				login() {
+					this.loggedIn = true;
+					this.initializeProducts();
+				},
+				logout() {
+					this.loggedIn = false;
+					this.products = [];
+					this.selectedPayment = '';
+					this.resetPaymentOptions();
+				},
+				initializeProducts() {
+					this.products = Array.from({ length: 20 }, (_, i) => ({
+						category: `category_${String(i + 1).padStart(2, '0')}`,
+						price: Math.floor(Math.random() * 99) + 1, // Random price between 1 and 100
+						quantity: 0
+					}));
+				},
+				increaseQuantity(product) {
+					product.quantity++;
+					this.checkFraudRisk();
+				},
+				decreaseQuantity(product) {
+					if (product.quantity > 0) {
+						product.quantity--;
+						this.checkFraudRisk();
+					}
+				},
+				updateQuantity(product) {
+					if (product.quantity < 0) product.quantity = 0;
+					if (product.quantity > 99) product.quantity = 99;
+					this.checkFraudRisk();
+				},
+				resetPaymentOptions() {
+					this.paymentOptions = {
+            fraudRisk: null,
+						advancePayment: { enabled: true  },
+						creditCard: { enabled: true },
+						invoice: { enabled: true }
+					};
+				},
+				async checkFraudRisk() {
+					// Clear previous timeout
+					if (this.fraudCheckTimeout) {
+						clearTimeout(this.fraudCheckTimeout);
+					}
+
+					// Reset if cart is empty
+					if (this.totalAmount === 0) {
+						this.resetPaymentOptions();
+						this.selectedPayment = '';
+						return;
+					}
+
+					// Debounce the fraud check
+					this.fraudCheckTimeout = setTimeout(async () => {
+						this.loading = true;
+						this.error = null;
+
+						try {
+							// Get current time
+              let timeStr = this.loginData.dateTime.replace('T', ' ');
+              // Ensure timeStr has seconds precision
+              while (timeStr.split(':').length < 3) {
+                timeStr += ':00';
+                console.log(this.loginData.dateTime, timeStr);
+              }
+
+							// Get all items in cart
+							const cartItems = this.products.filter(p => p.quantity > 0);
+
+							// Calculate fraud risk for the entire order
+							let maxFraudRisk = 0;
+
+							for (const item of cartItems) {
+								const amount = item.price * item.quantity;
+
+								const response = await fetch('http://localhost:8081/api/v1/predict', {
+									method: 'POST',
+									headers: {
+										'Content-Type': 'application/json'
+									},
+									body: JSON.stringify({
+										amount: amount,
+										product_category: item.category,
+										time: timeStr,
+										address_state: this.loginData.state,
+                                        credit_score: this.loginData.creditScore,
+                                        gender: this.loginData.gender
+									})
+								});
+
+								if (!response.ok) {
+									throw new Error('Fraud detection service unavailable');
+								}
+
+								const data = await response.json();
+								maxFraudRisk = Math.max(maxFraudRisk, data.fraud_probability);
+							}
+
+							// Update payment options based on fraud risk
+							this.paymentOptions.fraudRisk = maxFraudRisk;
+
+							// Advance payment - always enabled (lowest risk for merchant)
+              this.paymentOptions.advancePayment.enabled = true;
+
+							// Credit card - disabled if fraud risk >= 40%
+							this.paymentOptions.creditCard.enabled = maxFraudRisk < 0.40;
+
+							// Invoice - disabled if fraud risk >= 5%
+							this.paymentOptions.invoice.enabled = maxFraudRisk < 0.05;
+
+							// Reset selected payment if it's now disabled
+							if (this.selectedPayment === 'credit' && !this.paymentOptions.creditCard.enabled) {
+								this.selectedPayment = '';
+							}
+							if (this.selectedPayment === 'invoice' && !this.paymentOptions.invoice.enabled) {
+								this.selectedPayment = '';
+							}
+
+						} catch (err) {
+							this.error = `Error: ${err.message}. Make sure the fraud detection service is running on port 8082.`;
+							this.resetPaymentOptions();
+						} finally {
+							this.loading = false;
+						}
+					}, 500); // Wait 500ms after last change
+				},
+				buyNow() {
+					const paymentMethod = {
+						'advance': 'Advance Payment',
+						'credit': 'Credit Card',
+						'invoice': 'Invoice'
+					}[this.selectedPayment];
+
+					alert(`Order placed successfully!\n\nTotal: $${this.totalAmount.toFixed(2)}\nPayment Method: ${paymentMethod}\n\nThank you for shopping with us!`);
+
+					// Reset cart
+					this.products.forEach(p => p.quantity = 0);
+					this.selectedPayment = '';
+					this.resetPaymentOptions();
+				}
+			}
+		}).mount('#app');
+	</script>
+</body>
+</html>
