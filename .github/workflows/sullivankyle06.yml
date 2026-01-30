@@ -31,4 +31,4 @@ jobs:
       if: always()
       with:
         name: sullivankyle06-results
-        path: sullivankyle06-results.xml
+        path: model/sullivankyle06-results.xml
