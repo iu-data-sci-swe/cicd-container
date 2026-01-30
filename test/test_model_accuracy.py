@@ -78,7 +78,7 @@ class TestModelAccuracy:
         precision = precision_score(y, y_pred)
         f1 = f1_score(y, y_pred)
 
-        assert f1 >= 0.04, f"F1 score {f1:.4f} is below expected threshold of 0.04"
+        assert f1 >= 0.1, f"F1 score {f1:.4f} is below expected threshold of 0.1"
         assert recall >= 0.6, f"Recall score {recall:.4f} is below expected threshold of 0.6"
         assert precision >= 0.02, f"Precision score {precision:.4f} is below expected threshold of 0.02"
         
