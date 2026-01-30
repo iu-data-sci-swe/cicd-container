@@ -1,0 +1,105 @@
+name: Train Model - Krish
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  train-model:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Train model
+      run: |
+        python -c "
+        import pandas as pd
+        from sklearn.model_selection import train_test_split
+        from sklearn.preprocessing import OneHotEncoder
+        from sklearn.ensemble import RandomForestClassifier
+        import pickle
+        
+        # Load the dataset
+        df = pd.read_csv('data/fraud.csv.bz2')
+        df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+        
+        # Prepare data
+        df_cleaned = df.dropna().copy()
+        X = df_cleaned.drop('fraud', axis=1)
+        y = df_cleaned['fraud']
+        
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=566571358)
+        
+        X = X_train.copy()
+        y = y_train.copy()
+        
+        # Add hour feature
+        X['hour'] = X['time'].dt.hour
+        
+        # Fit OneHotEncoders
+        enc_product = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+        enc_gender = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+        enc_state = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+        enc_hour = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+        
+        product_encoded = enc_product.fit_transform(X[['product_category']])
+        gender_encoded = enc_gender.fit_transform(X[['gender']])
+        state_encoded = enc_state.fit_transform(X[['address_state']])
+        hour_encoded = enc_hour.fit_transform(X[['hour']])
+        
+        product_cols = enc_product.get_feature_names_out(['product_category'])
+        gender_cols = enc_gender.get_feature_names_out(['gender'])
+        state_cols = enc_state.get_feature_names_out(['address_state'])
+        hour_cols = enc_hour.get_feature_names_out(['hour'])
+        
+        product_df = pd.DataFrame(product_encoded, columns=product_cols, index=X.index)
+        gender_df = pd.DataFrame(gender_encoded, columns=gender_cols, index=X.index)
+        state_df = pd.DataFrame(state_encoded, columns=state_cols, index=X.index)
+        hour_df = pd.DataFrame(hour_encoded, columns=hour_cols, index=X.index)
+        
+        X = X.drop(['product_category', 'gender', 'address_state', 'time'], axis=1)
+        X = pd.concat([hour_df, product_df, gender_df, X['amount'].to_frame()], axis=1)
+        
+        # Train model
+        print('Training Random Forest model...')
+        model = RandomForestClassifier(n_estimators=20, class_weight='balanced', verbose=1, random_state=42)
+        model.fit(X, y)
+        
+        # Save model
+        with open('model/model.pkl', 'wb') as f:
+            pickle.dump({
+                'model': model,
+                'enc_product': enc_product,
+                'enc_hour': enc_hour,
+                'enc_gender': enc_gender,
+                'enc_state': enc_state,
+                'product_cols': product_cols,
+                'hour_cols': hour_cols,
+                'gender_cols': gender_cols,
+                'state_cols': state_cols,
+                'model_version': '0.1-krish'
+            }, f)
+        
+        print('Model trained and saved successfully!')
+        "
+    
+    - name: Upload model artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: fraud-detection-model-krish
+        path: model/model.pkl
+        retention-days: 30
