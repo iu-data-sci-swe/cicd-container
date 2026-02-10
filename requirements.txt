@@ -10,3 +10,4 @@ flasgger
 gunicorn
 pytest
 pylint
+prometheus_client
