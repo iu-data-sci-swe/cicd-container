@@ -211,7 +211,7 @@ def predict():
       500:
         description: Internal server error
     """
-    if model_version != '0.2':
+    if model_version != '0.1':
         prediction_errors.labels(error_type='bad_model_version').inc()
         return jsonify({"error": f"Model version mismatch: expected 0.1, got {model_version}"}), 500
 
