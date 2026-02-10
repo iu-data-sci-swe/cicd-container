@@ -6,6 +6,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flasgger import Swagger
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, REGISTRY
 
 import pandas as pd
 import numpy as np
@@ -17,6 +18,12 @@ CORS(app, resources={r"/api/*": {"origins":
                                   "http://127.0.0.1:*"]}})
 
 swagger = Swagger(app)
+
+# Prometheus metrics
+prediction_counter = Counter('fraud_predictions_total', 'Total number of fraud predictions', ['status'])
+prediction_latency = Histogram('fraud_prediction_duration_seconds', 'Duration of fraud predictions in seconds')
+prediction_errors = Counter('fraud_prediction_errors_total', 'Total number of prediction errors', ['error_type'])
+model_version_gauge = Gauge('model_version_info', 'Model version information', ['version'])
 
 # Load the model and encoders
 with open('model/model.pkl', 'rb') as f:
@@ -31,6 +38,9 @@ with open('model/model.pkl', 'rb') as f:
     gender_cols = model_data['gender_cols']
     state_cols = model_data['state_cols']
     model_version = model_data.get('model_version', 'unknown')
+
+# Set model version metric
+model_version_gauge.labels(version=model_version).set(1)
 
 def run_model(input_df):
     """
@@ -97,6 +107,42 @@ def create_input_dataframe(amount, product_category, time_str, address_state, ge
         raise ValueError(f"could not create input dataframe: {str(e)}") from e
 
     return input_df
+
+@app.route('/health', methods=['GET'])
+def health():
+    """
+    Health check endpoint.
+    ---
+    responses:
+      200:
+        description: Service is healthy
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              description: Health status
+            timestamp:
+              type: string
+              description: Current timestamp
+    """
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "model_version": model_version
+    }), 200
+
+
+@app.route('/metrics', methods=['GET'])
+def metrics():
+    """
+    Prometheus metrics endpoint.
+    ---
+    responses:
+      200:
+        description: Prometheus metrics
+    """
+    return generate_latest(REGISTRY), 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
 @app.route('/api/v1/model_version', methods=['GET'])
 def get_model_version():
@@ -166,45 +212,53 @@ def predict():
         description: Internal server error
     """
     if model_version != '0.2':
+        prediction_errors.labels(error_type='bad_model_version').inc()
         return jsonify({"error": f"Model version mismatch: expected 0.1, got {model_version}"}), 500
 
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No JSON data provided"}), 400
+        with prediction_latency.time():
+            data = request.get_json()
+            if not data:
+                prediction_errors.labels(error_type='no_json').inc()
+                return jsonify({"error": "No JSON data provided"}), 400
 
-        # Extract fields
-        amount = data.get('amount')
-        product_category = data.get('product_category')
-        time_str = data.get('time')
-        address_state = data.get('address_state')
-        gender = data.get('gender')
-        credit_score = data.get('credit_score')
+            # Extract fields
+            amount = data.get('amount')
+            product_category = data.get('product_category')
+            time_str = data.get('time')
+            address_state = data.get('address_state')
+            gender = data.get('gender')
+            credit_score = data.get('credit_score')
 
-        if (amount is None
-            or product_category is None
-            or gender is None
-            or credit_score is None
-            or time_str is None
-            or address_state is None):
-            return jsonify({"error": "Missing required fields"}), 400
+            if (amount is None
+                or product_category is None
+                or gender is None
+                or credit_score is None
+                or time_str is None
+                or address_state is None):
+                prediction_errors.labels(error_type='missing_fields').inc()
+                return jsonify({"error": "Missing required fields"}), 400
 
-        try:
-            input_df = create_input_dataframe(amount, product_category, time_str, address_state, gender, credit_score)
-        except ValueError as e:
-            return jsonify({"error": f"Data preparation failed: {str(e)}"}), 400
+            try:
+                input_df = create_input_dataframe(amount, product_category, time_str, address_state, gender, credit_score)
+            except ValueError as e:
+                prediction_errors.labels(error_type='data_preparation').inc()
+                return jsonify({"error": f"Data preparation failed: {str(e)}"}), 400
 
-        try:
-            prediction = run_model(input_df)
-        except Exception as e:
-            return jsonify({"error": f"prediction failed: {str(e)}"}), 500
+            try:
+                prediction = run_model(input_df)
+            except Exception as e:
+                prediction_errors.labels(error_type='model_inference').inc()
+                return jsonify({"error": f"prediction failed: {str(e)}"}), 500
 
-        return jsonify({"fraud_probability": min(1.0, max(0.0, prediction))}), 200
+            prediction_counter.labels(status='success').inc()
+            return jsonify({"fraud_probability": min(1.0, max(0.0, prediction))}), 200
 
     except Exception as e:
+        prediction_errors.labels(error_type='unknown').inc()
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8081))
-    host = os.environ.get('HOST', '0.0.0.0')
+    host = os.environ.get('HOST', '127.0.0.1')
     app.run(host=host, port=port, debug=True)
