@@ -5,9 +5,18 @@ import numpy as np
 from unittest.mock import Mock, patch
 import sys
 import os
+from prometheus_client import REGISTRY
 
 # Add the src directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+# Clear Prometheus registry to avoid duplicate metrics errors
+collectors = list(REGISTRY._collector_to_names.keys())
+for collector in collectors:
+    try:
+        REGISTRY.unregister(collector)
+    except Exception:
+        pass
 
 from fraud_prediction import run_model
 
