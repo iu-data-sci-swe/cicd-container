@@ -42,6 +42,8 @@ with open('model/model.pkl', 'rb') as f:
 # Set model version metric
 model_version_gauge.labels(version=model_version).set(1)
 
+git_commit = os.environ.get('GIT_COMMIT', 'unknown')
+
 def run_model(input_df):
     """
     Run the fraud prediction model on the input DataFrame.
@@ -157,7 +159,8 @@ def get_model_version():
             model_version:
               type: string
               description: Version of the model"""
-    return {"model_version": model_version}, 200
+    return {"model_version": model_version,
+            "git_hash": git_commit}, 200
 
 
 @app.route('/api/v1/predict', methods=['POST'])
