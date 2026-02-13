@@ -38,6 +38,7 @@ with open('model/model.pkl', 'rb') as f:
     gender_cols = model_data['gender_cols']
     state_cols = model_data['state_cols']
     model_version = model_data.get('model_version', 'unknown')
+    train_date = model_data.get('train_date', 'unknown')
 
 # Set model version metric
 model_version_gauge.labels(version=model_version).set(1)
@@ -158,9 +159,18 @@ def get_model_version():
           properties:
             model_version:
               type: string
-              description: Version of the model"""
+              description: Version of the model
+            git_hash:
+              type: string
+              description: Git commit hash of the model
+            train_date:
+              type: string
+              description: Training date of the model
+    """
     return {"model_version": model_version,
-            "git_hash": git_commit}, 200
+            "git_hash": git_commit,
+            "train_date": str(train_date)
+            }, 200
 
 
 @app.route('/api/v1/predict', methods=['POST'])
