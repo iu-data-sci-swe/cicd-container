@@ -11,3 +11,4 @@ gunicorn
 pytest
 pylint
 prometheus_client
+mlflow

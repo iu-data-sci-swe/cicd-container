@@ -30,5 +30,7 @@
       "label": "Static Web Server",
       "onAutoForward": "notify"
     }
-  }
+  },
+
+  "postStartCommand": "sudo bash .devcontainer/add-host-alias.sh"
 }
