@@ -11,8 +11,6 @@ from prometheus_client import Counter, Histogram, Gauge, generate_latest, REGIST
 import pandas as pd
 import numpy as np
 import mlflow.sklearn
-from mlflow.tracking import MlflowClient
-import tempfile
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins":
@@ -106,8 +104,8 @@ def create_input_dataframe(amount, product_category, time_str, address_state, ge
     try:
         input_df = pd.concat([product_df, gender_df, state_df, hour_df,
                               pd.DataFrame({
-                                  'amount': [amount],
-                                  'credit_score': [credit_score]
+                                  'credit_score': [credit_score],
+                                  'amount': [amount]
                               })], axis=1)
     except Exception as e:
         raise ValueError(f"could not create input dataframe: {str(e)}") from e
