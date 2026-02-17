@@ -38,31 +38,21 @@ mlflow.set_tracking_uri(mlflow_uri)
 # Load the model from MLflow registry
 model_uri = f"models:/{model_name}"
 model = mlflow.sklearn.load_model(model_uri)
-
-# Get the run_id from the model version
-client = MlflowClient(tracking_uri=mlflow_uri)
-model_version = client.get_latest_versions(model_name)[0]
-run_id = model_version.run_id
-
-# Download encoders artifact from MLflow
-with tempfile.TemporaryDirectory() as temp_dir:
-    client.download_artifacts(run_id, "encoders", temp_dir)
-    encoders_file = os.path.join(temp_dir, "encoders", "encoders.pkl")
-    with open(encoders_file, 'rb') as f:
-        encoders_data = pickle.load(f)
-        enc_product = encoders_data['enc_product']
-        enc_hour = encoders_data['enc_hour']
-        enc_gender = encoders_data['enc_gender']
-        enc_state = encoders_data['enc_state']
-        product_cols = encoders_data['product_cols']
-        hour_cols = encoders_data['hour_cols']
-        gender_cols = encoders_data['gender_cols']
-        state_cols = encoders_data['state_cols']
-        model_version_str = encoders_data.get('model_version', 'unknown')
-        train_date = encoders_data.get('train_date', 'unknown')
-
 # Set model version metric
-model_version_gauge.labels(version=model_version_str).set(1)
+model_version_gauge.labels(version=model_name).set(1)
+
+
+# get encoders from file system
+with open("model/encoders.pkl", 'rb') as f:
+    encoders_data = pickle.load(f)
+    enc_product = encoders_data['enc_product']
+    enc_hour = encoders_data['enc_hour']
+    enc_gender = encoders_data['enc_gender']
+    enc_state = encoders_data['enc_state']
+    product_cols = encoders_data['product_cols']
+    hour_cols = encoders_data['hour_cols']
+    gender_cols = encoders_data['gender_cols']
+    state_cols = encoders_data['state_cols']
 
 git_commit = os.environ.get('GIT_COMMIT', 'unknown')
 
@@ -144,8 +134,7 @@ def health():
     """
     return jsonify({
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "model_version": model_version_str
+        "timestamp": datetime.utcnow().isoformat()
     }), 200
 
 
@@ -170,21 +159,19 @@ def get_model_version():
         schema:
           type: object
           properties:
-            model_version:
+            model_name:
               type: string
-              description: Version of the model
+              description: Name of the model
             git_hash:
               type: string
               description: Git commit hash of the model
-            train_date:
+            mlflow_uri:
               type: string
-              description: Training date of the model
+              description: MLFlow URI of the model
     """
     return {"model_name": model_name,
             "mlflow_uri": mlflow_uri,
-            "model_version": model_version_str,
             "git_hash": git_commit,
-            "train_date": str(train_date)
             }, 200
 
 
@@ -239,9 +226,6 @@ def predict():
       500:
         description: Internal server error
     """
-    if model_version_str != '0.1':
-        prediction_errors.labels(error_type='bad_model_version').inc()
-        return jsonify({"error": f"Model version mismatch: expected 0.1, got {model_version_str}"}), 500
 
     try:
         with prediction_latency.time():
